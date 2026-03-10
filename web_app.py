@@ -155,9 +155,10 @@ if __name__ == "__main__":
     import os
     import subprocess
     import threading
-    port = 5000
 
-    # Start cloudflared tunnel (proper SSL, no password, no signup)
+    port = int(os.environ.get("PORT", 5000))
+
+    # Start cloudflared tunnel when running locally on Windows
     cloudflared_path = os.path.join(os.path.dirname(__file__), "cloudflared", "cloudflared.exe")
 
     def _start_tunnel():
