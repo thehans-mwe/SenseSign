@@ -1,0 +1,30 @@
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+/data
+cloudflared/
+public_url.txt
+/static
+delete.*
+.env
+ss/
+
+# Model backups
+*.bak
+*.best.h5

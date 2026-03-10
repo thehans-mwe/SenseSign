@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenseSpeak — ASL Translator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #7c5cfc;
+            --accent-light: #a78bfa;
+            --accent-glow: rgba(124,92,252,.35);
+            --bg-primary: #0a0b10;
+            --bg-card: rgba(255,255,255,.04);
+            --bg-card-hover: rgba(255,255,255,.06);
+            --border: rgba(255,255,255,.07);
+            --text: #eaeaf0;
+            --text-dim: #6b6b80;
+            --success: #34d399;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Animated background ─────────────── */
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            overflow: hidden;
+        }
+        .bg-glow .orb {
+            position: absolute; border-radius: 50%; filter: blur(120px);
+            opacity: .18; animation: orbFloat 18s ease-in-out infinite alternate;
+        }
+        .bg-glow .orb:nth-child(1) {
+            width: 600px; height: 600px; top: -15%; left: -10%;
+            background: #7c5cfc;
+        }
+        .bg-glow .orb:nth-child(2) {
+            width: 500px; height: 500px; bottom: -10%; right: -8%;
+            background: #06b6d4; animation-delay: -6s; animation-duration: 22s;
+        }
+        .bg-glow .orb:nth-child(3) {
+            width: 350px; height: 350px; top: 40%; left: 50%;
+            background: #ec4899; animation-delay: -12s; animation-duration: 25s;
+        }
+        @keyframes orbFloat {
+            0% { transform: translate(0,0) scale(1); }
+            50% { transform: translate(40px,-30px) scale(1.1); }
+            100% { transform: translate(-20px,20px) scale(.95); }
+        }
+
+        .page-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+
+        /* ── Header / Nav ────────────────────── */
+        header {
+            width: 100%; padding: 1rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(10,11,16,.6);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem; font-weight: 700;
+            display: flex; align-items: center; gap: .6rem;
+            text-decoration: none; color: var(--text);
+        }
+        .logo-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), #06b6d4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; color: #fff; font-weight: 800;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .logo-text span { color: var(--accent-light); }
+
+        .header-pill {
+            padding: .35rem .9rem; border-radius: 20px;
+            background: rgba(124,92,252,.12); border: 1px solid rgba(124,92,252,.2);
+            font-size: .72rem; font-weight: 500; color: var(--accent-light);
+            letter-spacing: .04em; text-transform: uppercase;
+        }
+
+        /* ── Hero / Landing ──────────────────── */
+        .hero {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; text-align: center;
+            padding: 6rem 2rem 4rem; gap: 1.6rem;
+            max-width: 650px;
+            animation: fadeUp .8s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .4rem 1rem; border-radius: 20px;
+            background: rgba(124,92,252,.1); border: 1px solid rgba(124,92,252,.18);
+            font-size: .78rem; color: var(--accent-light); font-weight: 500;
+        }
+        .hero-badge .pulse-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--success);
+            animation: pulseDot 2s infinite;
+        }
+        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+        .hero h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3.2rem; font-weight: 700; line-height: 1.1;
+            letter-spacing: -.03em;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-light));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.05rem; line-height: 1.7; color: var(--text-dim);
+            max-width: 480px;
+        }
+
+        #startBtn {
+            display: inline-flex; align-items: center; gap: .6rem;
+            padding: .85rem 2.2rem; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), #5b52e5);
+            color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 24px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.15);
+            transition: transform .2s, box-shadow .2s;
+        }
+        #startBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px var(--accent-glow); }
+        #startBtn:active { transform: translateY(0); }
+        #startBtn svg { width: 20px; height: 20px; }
+        #startBtn.hidden, .hero.hidden { display: none; }
+
+        /* ── Main app layout ─────────────────── */
+        .container {
+            display: none; gap: 1.5rem; padding: 1.5rem 1.5rem 3rem;
+            max-width: 1200px; width: 100%;
+            animation: fadeUp .6s ease-out;
+        }
+        .container.active { display: flex; flex-wrap: wrap; justify-content: center; }
+
+        /* ── Video panel ─────────────────────── */
+        .video-panel {
+            position: relative; border-radius: var(--radius); overflow: hidden;
+            flex: 1 1 640px; max-width: 740px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 40px rgba(0,0,0,.3);
+        }
+        .video-panel video, .video-panel canvas { display: block; width: 100%; height: auto; }
+        .video-panel video { display: none; }
+
+        .video-badge {
+            position: absolute; top: 14px; left: 14px;
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 12px; border-radius: 8px;
+            background: rgba(0,0,0,.55); backdrop-filter: blur(8px);
+            font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        .video-badge .rec-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+            animation: pulseDot 1.5s infinite;
+        }
+
+        .fps-badge {
+            position: absolute; top: 14px; right: 14px;
+            padding: 5px 10px; border-radius: 8px;
+            background: rgba(0,0,0,.55); backdrop-filter: blur(8px);
+            font-size: .7rem; font-weight: 600; color: var(--text-dim);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Side panel ──────────────────────── */
+        .side-panel {
+            display: flex; flex-direction: column; gap: 1rem;
+            flex: 0 1 320px; min-width: 280px;
+        }
+
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.5rem;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            transition: background .2s, border-color .2s;
+        }
+        .card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,.1); }
+
+        .card-label {
+            font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+            color: var(--text-dim); margin-bottom: .8rem; font-weight: 600;
+        }
+
+        /* ── Detection card ──────────────────── */
+        .detect-wrap { display: flex; align-items: center; gap: 1.5rem; }
+
+        .letter-ring {
+            position: relative; width: 110px; height: 110px; flex-shrink: 0;
+        }
+        .letter-ring svg { width: 110px; height: 110px; transform: rotate(-90deg); }
+        .letter-ring .ring-bg { fill: none; stroke: rgba(255,255,255,.06); stroke-width: 5; }
+        .letter-ring .ring-fg {
+            fill: none; stroke: url(#ringGrad); stroke-width: 5;
+            stroke-linecap: round; stroke-dasharray: 314; stroke-dashoffset: 314;
+            transition: stroke-dashoffset .35s ease;
+        }
+        .letter-display {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3.2rem; font-weight: 700; color: var(--accent-light);
+            transition: color .2s;
+        }
+        .letter-display.empty { color: #2a2a3a; }
+
+        .detect-meta { flex: 1; }
+        .detect-meta .conf-value {
+            font-size: 2rem; font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            background: linear-gradient(135deg, var(--accent-light), #06b6d4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .detect-meta .conf-label { font-size: .78rem; color: var(--text-dim); margin-top: .1rem; }
+
+        .hold-bar-wrap {
+            margin-top: .8rem; height: 4px; border-radius: 4px;
+            background: rgba(255,255,255,.06); overflow: hidden;
+        }
+        .hold-bar {
+            height: 100%; width: 0%; border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            transition: width .1s linear;
+        }
+        .hold-hint { font-size: .7rem; color: var(--text-dim); margin-top: .35rem; }
+
+        /* ── Sentence card ───────────────────── */
+        .sentence-area {
+            min-height: 3.2rem; padding: 1rem;
+            background: rgba(0,0,0,.2); border-radius: 10px;
+            border: 1px solid var(--border);
+            font-size: 1.3rem; line-height: 1.6; letter-spacing: .08em;
+            word-break: break-word;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 500;
+        }
+        .sentence-area:empty::after {
+            content: "Signs will appear here...";
+            color: #333; font-style: italic; font-weight: 400; letter-spacing: 0;
+        }
+
+        .btn-row { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: wrap; }
+        .btn-row button {
+            display: inline-flex; align-items: center; gap: .35rem;
+            padding: .45rem .9rem; border-radius: 8px;
+            border: 1px solid var(--border); background: rgba(255,255,255,.04);
+            color: var(--text-dim); font-size: .78rem; font-weight: 500;
+            cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif;
+        }
+        .btn-row button:hover { background: rgba(255,255,255,.08); color: var(--text); border-color: rgba(255,255,255,.14); }
+        .btn-row button svg { width: 14px; height: 14px; }
+
+        /* ── Instructions card ───────────────── */
+        .steps { display: flex; flex-direction: column; gap: .6rem; }
+        .step {
+            display: flex; align-items: flex-start; gap: .65rem;
+            font-size: .82rem; color: var(--text-dim); line-height: 1.45;
+        }
+        .step-num {
+            width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .65rem; font-weight: 700;
+            background: rgba(124,92,252,.12); color: var(--accent-light);
+        }
+
+        /* ── Responsive ──────────────────────── */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            .hero { padding: 4rem 1.2rem 2.5rem; }
+            .container { padding: 1rem; }
+            .side-panel { flex: 1 1 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow">
+        <div class="orb"></div><div class="orb"></div><div class="orb"></div>
+    </div>
+
+    <div class="page-wrap">
+        <header>
+            <a class="logo" href="#">
+                <div class="logo-icon">S</div>
+                <div class="logo-text"><span>Sense</span>Speak</div>
+            </a>
+            <div class="header-pill">ASL Translator</div>
+        </header>
+
+        <!-- Hero / Landing -->
+        <section class="hero" id="hero">
+            <div class="hero-badge">
+                <div class="pulse-dot"></div>
+                Real-time ASL Detection
+            </div>
+            <h1>Translate Sign Language Instantly</h1>
+            <p>SenseSpeak uses AI to recognize American Sign Language hand signs through your webcam and translate them into text in real time.</p>
+            <button id="startBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Start Camera
+            </button>
+        </section>
+
+        <!-- Main App -->
+        <div class="container" id="mainUI">
+            <div class="video-panel">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <div class="video-badge">
+                    <div class="rec-dot"></div>
+                    <span>Live</span>
+                </div>
+                <div class="fps-badge" id="fpsBadge">-- fps</div>
+            </div>
+
+            <div class="side-panel">
+                <!-- Detection -->
+                <div class="card">
+                    <div class="card-label">Detected Sign</div>
+                    <div class="detect-wrap">
+                        <div class="letter-ring">
+                            <svg viewBox="0 0 110 110">
+                                <defs>
+                                    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#7c5cfc"/>
+                                        <stop offset="100%" stop-color="#06b6d4"/>
+                                    </linearGradient>
+                                </defs>
+                                <circle class="ring-bg" cx="55" cy="55" r="50"/>
+                                <circle class="ring-fg" id="confRing" cx="55" cy="55" r="50"/>
+                            </svg>
+                            <div class="letter-display empty" id="letter">—</div>
+                        </div>
+                        <div class="detect-meta">
+                            <div class="conf-value" id="confValue">0%</div>
+                            <div class="conf-label">confidence</div>
+                            <div class="hold-bar-wrap">
+                                <div class="hold-bar" id="holdBar"></div>
+                            </div>
+                            <div class="hold-hint">Hold sign 1.5s to add</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sentence -->
+                <div class="card">
+                    <div class="card-label">Sentence</div>
+                    <div class="sentence-area" id="sentence"></div>
+                    <div class="btn-row">
+                        <button onclick="addSpace()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 15h14M5 15l3 3m-3-3l3-3"/></svg>
+                            Space
+                        </button>
+                        <button onclick="backspace()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+                            Delete
+                        </button>
+                        <button onclick="clearSentence()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6"/></svg>
+                            Clear
+                        </button>
+                        <button onclick="copySentence()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="card">
+                    <div class="card-label">How to Use</div>
+                    <div class="steps">
+                        <div class="step"><div class="step-num">1</div>Allow camera access to get started</div>
+                        <div class="step"><div class="step-num">2</div>Show an ASL hand sign to your webcam</div>
+                        <div class="step"><div class="step-num">3</div>Hold the sign steady for detection</div>
+                        <div class="step"><div class="step-num">4</div>Hold for 1.5 seconds to lock the letter</div>
+                        <div class="step"><div class="step-num">5</div>Use the buttons to build a sentence</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const video      = document.getElementById("video");
+const canvas     = document.getElementById("canvas");
+const ctx        = canvas.getContext("2d");
+const letterEl   = document.getElementById("letter");
+const confRing   = document.getElementById("confRing");
+const confValue  = document.getElementById("confValue");
+const holdBar    = document.getElementById("holdBar");
+const sentenceEl = document.getElementById("sentence");
+const startBtn   = document.getElementById("startBtn");
+const hero       = document.getElementById("hero");
+const mainUI     = document.getElementById("mainUI");
+const fpsBadge   = document.getElementById("fpsBadge");
+
+let sentence    = "";
+let lastLetter  = "";
+let holdStart   = null;
+let letterAdded = false;
+const HOLD_MS   = 1500;
+const CIRCUM    = 314; // 2 * PI * 50
+
+// FPS tracking
+let frameCount = 0, lastFpsTime = performance.now();
+
+const CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [0,9],[9,10],[10,11],[11,12],
+    [0,13],[13,14],[14,15],[15,16],
+    [0,17],[17,18],[18,19],[19,20],
+    [5,9],[9,13],[13,17]
+];
+
+// ── Camera start ─────────────────────────────────────────
+startBtn.addEventListener("click", async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } }
+        });
+        video.srcObject = stream;
+        await video.play();
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        hero.classList.add("hidden");
+        mainUI.classList.add("active");
+        loop();
+    } catch (e) {
+        alert("Camera access denied. Please allow camera permissions and try again.");
+    }
+});
+
+// ── Capture frame as JPEG base64 ─────────────────────────
+const sendCanvas = document.createElement("canvas");
+const sendCtx    = sendCanvas.getContext("2d");
+
+function captureFrame() {
+    sendCanvas.width  = video.videoWidth;
+    sendCanvas.height = video.videoHeight;
+    sendCtx.drawImage(video, 0, 0);
+    return sendCanvas.toDataURL("image/jpeg", 0.7);
+}
+
+// ── Draw landmarks on visible canvas ─────────────────────
+function drawOverlay(hands) {
+    const w = canvas.width, h = canvas.height;
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
+
+    for (const hand of hands) {
+        const pts = hand.landmarks.map(([x, y]) => [w - x * w, y * h]);
+
+        // Glow connections
+        ctx.shadowColor = "rgba(124,92,252,.5)";
+        ctx.shadowBlur = 6;
+        ctx.strokeStyle = "#7c5cfc";
+        ctx.lineWidth = 2.5;
+        for (const [a, b] of CONNECTIONS) {
+            ctx.beginPath();
+            ctx.moveTo(pts[a][0], pts[a][1]);
+            ctx.lineTo(pts[b][0], pts[b][1]);
+            ctx.stroke();
+        }
+
+        ctx.shadowBlur = 0;
+
+        // Points
+        for (const [x, y] of pts) {
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(124,92,252,.8)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Bounding box (rounded feel)
+        const bb = hand.bbox;
+        const pad = 12;
+        ctx.strokeStyle = "rgba(124,92,252,.6)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(bb[0] - pad, bb[1] - pad, bb[2] - bb[0] + pad*2, bb[3] - bb[1] + pad*2);
+        ctx.setLineDash([]);
+
+        // Label pill
+        if (hand.sign) {
+            const lx = bb[0] - pad, ly = bb[1] - pad - 28;
+            const txt = hand.sign;
+            ctx.font = "bold 14px 'Inter', sans-serif";
+            const tw = ctx.measureText(txt).width + 16;
+            ctx.fillStyle = "rgba(124,92,252,.85)";
+            ctx.beginPath();
+            ctx.roundRect(lx, ly, tw, 24, 6);
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.fillText(txt, lx + 8, ly + 17);
+        }
+    }
+}
+
+// ── Main loop ────────────────────────────────────────────
+let busy = false;
+
+async function loop() {
+    // FPS counter
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime >= 1000) {
+        fpsBadge.textContent = frameCount + " fps";
+        frameCount = 0;
+        lastFpsTime = now;
+    }
+
+    if (!busy) {
+        busy = true;
+        try {
+            const b64 = captureFrame();
+            const res = await fetch("/process", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: b64 })
+            });
+            const data = await res.json();
+
+            drawOverlay(data.hands || []);
+
+            const { letter, confidence } = data;
+            letterEl.textContent = letter || "—";
+            letterEl.classList.toggle("empty", !letter);
+
+            // Confidence ring
+            const offset = CIRCUM - (confidence / 100) * CIRCUM;
+            confRing.style.strokeDashoffset = offset;
+            confValue.textContent = confidence + "%";
+
+            // Hold progress bar
+            if (letter && letter === lastLetter) {
+                if (!letterAdded && holdStart) {
+                    const elapsed = Date.now() - holdStart;
+                    const pct = Math.min(elapsed / HOLD_MS * 100, 100);
+                    holdBar.style.width = pct + "%";
+                    if (elapsed >= HOLD_MS) {
+                        sentence += letter;
+                        sentenceEl.textContent = sentence;
+                        letterAdded = true;
+                        holdBar.style.width = "100%";
+                    }
+                }
+            } else {
+                lastLetter  = letter;
+                holdStart   = letter ? Date.now() : null;
+                letterAdded = false;
+                holdBar.style.width = "0%";
+            }
+        } catch (e) { /* ignore transient errors */ }
+        busy = false;
+    } else {
+        // Draw raw video while waiting for server response
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+    requestAnimationFrame(loop);
+}
+
+function addSpace()      { sentence += " "; sentenceEl.textContent = sentence; }
+function backspace()     { sentence = sentence.slice(0, -1); sentenceEl.textContent = sentence || ""; }
+function clearSentence() { sentence = ""; sentenceEl.textContent = ""; }
+function copySentence()  {
+    navigator.clipboard.writeText(sentence);
+    const btn = event.currentTarget;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    setTimeout(() => btn.innerHTML = orig, 1200);
+}
+</script>
+</body>
+</html>
