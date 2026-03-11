@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.vscode/
+cloudflared/
+*.bat
+public_url.txt
+docs/
+resources/
+train.py
+app.py
+slr/model/slr_model.hdf5
+slr/model/__pycache__/
+slr/utils/__pycache__/
+slr/__pycache__/
