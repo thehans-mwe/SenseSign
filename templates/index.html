@@ -113,16 +113,12 @@
         }
         .logo-icon {
             width: 34px; height: 34px; border-radius: 10px;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 100%);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.05rem; color: #fff; font-weight: 800;
             box-shadow: 0 0 24px var(--accent-glow), 0 0 8px rgba(34,211,238,.15);
             position: relative; overflow: hidden;
         }
-        .logo-icon::after {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.2));
-            border-radius: inherit;
+        .logo-icon svg {
+            width: 100%; height: 100%; display: block; border-radius: 10px;
         }
         .logo-text span { color: var(--accent-light); }
 
@@ -138,9 +134,8 @@
         .hero {
             display: flex; flex-direction: column; align-items: center;
             justify-content: center; text-align: center;
-            padding: 8rem 2rem 5rem; gap: 2rem;
+            padding: 5rem 2rem 5rem; gap: 2rem;
             max-width: 700px;
-            animation: fadeUp .9s cubic-bezier(.16,1,.3,1);
         }
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(30px); }
@@ -406,16 +401,82 @@
             border: 1px solid rgba(109,92,252,.12);
         }
 
-        /* ── Footer ──────────────────────────── */
-        .footer {
-            width: 100%; text-align: center;
-            padding: 2rem; color: var(--text-dim);
-            font-size: .72rem; font-weight: 500;
-            border-top: 1px solid var(--border);
-            margin-top: auto;
+        /* ── Loading Screen ───────────────────── */
+        .loader-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 2rem;
+            background: var(--bg-primary);
+            transition: opacity .6s cubic-bezier(.16,1,.3,1), visibility .6s;
         }
-        .footer a { color: var(--accent-light); text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
+        .loader-screen.fade-out {
+            opacity: 0; visibility: hidden;
+        }
+        .loader-logo {
+            width: 80px; height: 80px;
+            animation: loaderPulse 1.8s ease-in-out infinite;
+        }
+        .loader-logo svg { width: 100%; height: 100%; }
+        @keyframes loaderPulse {
+            0%,100% { transform: scale(1); opacity: .8; }
+            50%     { transform: scale(1.08); opacity: 1; }
+        }
+        .loader-bar-wrap {
+            width: 180px; height: 3px; border-radius: 3px;
+            background: rgba(255,255,255,.06); overflow: hidden;
+        }
+        .loader-bar {
+            height: 100%; width: 0%; border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--cyan));
+            animation: loaderFill 1.8s cubic-bezier(.4,0,.2,1) forwards;
+        }
+        @keyframes loaderFill {
+            0%   { width: 0%; }
+            60%  { width: 80%; }
+            100% { width: 100%; }
+        }
+        .loader-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem; font-weight: 600; color: var(--text-dim);
+            letter-spacing: .05em;
+        }
+
+        /* ── Page entrance (after loader) ─────── */
+        .page-wrap {
+            opacity: 0; transform: translateY(12px);
+        }
+        .page-wrap.reveal {
+            animation: pageReveal .8s cubic-bezier(.16,1,.3,1) forwards;
+        }
+        @keyframes pageReveal {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header entrance stagger */
+        header.animate-in .logo {
+            animation: slideInLeft .6s cubic-bezier(.16,1,.3,1) both;
+        }
+        header.animate-in .header-right {
+            animation: slideInRight .6s cubic-bezier(.16,1,.3,1) both;
+            animation-delay: .08s;
+        }
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Hero stagger entrance */
+        .hero.animate-in .hero-badge { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .1s; }
+        .hero.animate-in .hero-hand  { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .2s; }
+        .hero.animate-in h1          { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .3s; }
+        .hero.animate-in p           { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .4s; }
+        .hero.animate-in .hero-actions  { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .5s; }
+        .hero.animate-in .hero-features { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both; animation-delay: .6s; }
 
         /* ── Responsive ──────────────────────── */
         @media (max-width: 900px) {
@@ -435,15 +496,49 @@
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loader-screen" id="loaderScreen">
+        <div class="loader-logo">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="logoGrad" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#6d5cfc"/>
+                        <stop offset="100%" stop-color="#22d3ee"/>
+                    </linearGradient>
+                </defs>
+                <rect width="80" height="80" rx="18" fill="url(#logoGrad)"/>
+                <path d="M40 18c-2.2 0-4 1.3-4 3v10c0 .6-.2 1.1-.6 1.4-.4.4-1 .6-1.4.6h-2c-1.7 0-3 1.3-3 3s1.3 3 3 3h2c.6 0 1 .2 1.4.6.4.4.6.9.6 1.4v2c0 1.7 1.3 3 3 3h2c1.7 0 3-1.3 3-3v-2c0-.6.2-1.1.6-1.4.4-.4.9-.6 1.4-.6h2c1.7 0 3-1.3 3-3s-1.3-3-3-3h-2c-.6 0-1-.2-1.4-.6-.4-.4-.6-.9-.6-1.4V21c0-1.7-1.8-3-4-3z" fill="rgba(255,255,255,.9)"/>
+                <circle cx="28" cy="52" r="3.5" fill="rgba(255,255,255,.7)"/>
+                <circle cx="40" cy="58" r="3.5" fill="rgba(255,255,255,.7)"/>
+                <circle cx="52" cy="52" r="3.5" fill="rgba(255,255,255,.7)"/>
+                <path d="M24 28c0-1 .8-2 2-2s2 1 2 2v6c0 1-.8 2-2 2s-2-1-2-2v-6z" fill="rgba(255,255,255,.5)"/>
+                <path d="M52 28c0-1 .8-2 2-2s2 1 2 2v6c0 1-.8 2-2 2s-2-1-2-2v-6z" fill="rgba(255,255,255,.5)"/>
+            </svg>
+        </div>
+        <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+        <div class="loader-text">SenseSign</div>
+    </div>
+
     <div class="bg-canvas">
         <div class="orb"></div><div class="orb"></div><div class="orb"></div>
     </div>
     <div class="bg-noise"></div>
 
-    <div class="page-wrap">
-        <header>
-            <a class="logo" href="#">
-                <div class="logo-icon">S</div>
+    <div class="page-wrap" id="pageWrap">
+        <header id="headerEl">
+            <a class="logo" id="logoLink" href="javascript:void(0)">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="80" height="80" rx="18" fill="url(#logoGradH)"/>
+                        <defs><linearGradient id="logoGradH" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#6d5cfc"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs>
+                        <path d="M40 18c-2.2 0-4 1.3-4 3v10c0 .6-.2 1.1-.6 1.4-.4.4-1 .6-1.4.6h-2c-1.7 0-3 1.3-3 3s1.3 3 3 3h2c.6 0 1 .2 1.4.6.4.4.6.9.6 1.4v2c0 1.7 1.3 3 3 3h2c1.7 0 3-1.3 3-3v-2c0-.6.2-1.1.6-1.4.4-.4.9-.6 1.4-.6h2c1.7 0 3-1.3 3-3s-1.3-3-3-3h-2c-.6 0-1-.2-1.4-.6-.4-.4-.6-.9-.6-1.4V21c0-1.7-1.8-3-4-3z" fill="rgba(255,255,255,.9)"/>
+                        <circle cx="28" cy="52" r="3.5" fill="rgba(255,255,255,.7)"/>
+                        <circle cx="40" cy="58" r="3.5" fill="rgba(255,255,255,.7)"/>
+                        <circle cx="52" cy="52" r="3.5" fill="rgba(255,255,255,.7)"/>
+                        <path d="M24 28c0-1 .8-2 2-2s2 1 2 2v6c0 1-.8 2-2 2s-2-1-2-2v-6z" fill="rgba(255,255,255,.5)"/>
+                        <path d="M52 28c0-1 .8-2 2-2s2 1 2 2v6c0 1-.8 2-2 2s-2-1-2-2v-6z" fill="rgba(255,255,255,.5)"/>
+                    </svg>
+                </div>
                 <div class="logo-text"><span>Sense</span>Sign</div>
             </a>
             <div class="header-right">
@@ -561,9 +656,6 @@
             </div>
         </div>
 
-        <div class="footer">
-            Built with AI &middot; SenseSign &copy; 2026
-        </div>
     </div>
 
 <script>
@@ -579,6 +671,49 @@ const startBtn   = document.getElementById("startBtn");
 const hero       = document.getElementById("hero");
 const mainUI     = document.getElementById("mainUI");
 const fpsBadge   = document.getElementById("fpsBadge");
+const pageWrap   = document.getElementById("pageWrap");
+const headerEl   = document.getElementById("headerEl");
+const logoLink   = document.getElementById("logoLink");
+const loaderScreen = document.getElementById("loaderScreen");
+
+let cameraActive = false;
+
+// ── Loading screen + entrance animation ──────────────────
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        loaderScreen.classList.add("fade-out");
+        pageWrap.classList.add("reveal");
+        headerEl.classList.add("animate-in");
+        hero.classList.add("animate-in");
+    }, 2000);
+});
+
+// ── Logo click → back to home (only from camera page) ────
+logoLink.addEventListener("click", () => {
+    if (!cameraActive) return;
+    // Stop camera
+    const stream = video.srcObject;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+    cameraActive = false;
+    stopLoop();
+    // Reset UI
+    mainUI.classList.remove("active");
+    hero.classList.remove("hidden");
+    hero.classList.add("animate-in");
+    // Reset detection state
+    latestHands = [];
+    sentence = "";
+    sentenceEl.textContent = "";
+    lastLetter = "";
+    holdStart = null;
+    letterAdded = false;
+    letterEl.textContent = "—";
+    letterEl.classList.add("empty");
+    confRing.style.strokeDashoffset = 314;
+    confValue.textContent = "0%";
+    holdBar.style.width = "0%";
+});
 
 let sentence    = "";
 let lastLetter  = "";
@@ -610,7 +745,9 @@ startBtn.addEventListener("click", async () => {
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
         hero.classList.add("hidden");
+        hero.classList.remove("animate-in");
         mainUI.classList.add("active");
+        cameraActive = true;
         loop();
     } catch (e) {
         alert("Camera access denied. Please allow camera permissions and try again.");
@@ -711,7 +848,7 @@ function renderLoop() {
         }
     }
 
-    requestAnimationFrame(renderLoop);
+    if (renderRunning) requestAnimationFrame(renderLoop);
 }
 
 // ── Detection loop (network, decoupled) ──────────────────
@@ -751,9 +888,18 @@ async function detectLoop() {
     busy = false;
 }
 
+let detectIntervalId = null;
+let renderRunning = false;
+
 function loop() {
-    renderLoop();
-    setInterval(detectLoop, 100); // send ~10 requests/sec max
+    if (!renderRunning) { renderRunning = true; renderLoop(); }
+    if (detectIntervalId) clearInterval(detectIntervalId);
+    detectIntervalId = setInterval(detectLoop, 100);
+}
+
+function stopLoop() {
+    renderRunning = false;
+    if (detectIntervalId) { clearInterval(detectIntervalId); detectIntervalId = null; }
 }
 
 function addSpace()      { sentence += " "; sentenceEl.textContent = sentence; }
