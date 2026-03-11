@@ -464,19 +464,32 @@ function captureFrame() {
     return sendCanvas.toDataURL("image/jpeg", 0.7);
 }
 
-// ── Draw landmarks on visible canvas ─────────────────────
-function drawOverlay(hands) {
+// ── Main loop (rendering) ────────────────────────────────
+let latestHands = [];
+
+function renderLoop() {
+    // FPS counter
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime >= 1000) {
+        fpsBadge.textContent = frameCount + " fps";
+        frameCount = 0;
+        lastFpsTime = now;
+    }
+
     const w = canvas.width, h = canvas.height;
+
+    // Always draw the live video — never skip frames
     ctx.save();
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, w, h);
     ctx.restore();
 
-    for (const hand of hands) {
+    // Overlay the latest hand landmarks on top
+    for (const hand of latestHands) {
         const pts = hand.landmarks.map(([x, y]) => [w - x * w, y * h]);
 
-        // Glow connections
         ctx.shadowColor = "rgba(124,92,252,.5)";
         ctx.shadowBlur = 6;
         ctx.strokeStyle = "#7c5cfc";
@@ -487,10 +500,8 @@ function drawOverlay(hands) {
             ctx.lineTo(pts[b][0], pts[b][1]);
             ctx.stroke();
         }
-
         ctx.shadowBlur = 0;
 
-        // Points
         for (const [x, y] of pts) {
             ctx.beginPath();
             ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -501,7 +512,6 @@ function drawOverlay(hands) {
             ctx.stroke();
         }
 
-        // Bounding box (rounded feel)
         const bb = hand.bbox;
         const pad = 12;
         ctx.strokeStyle = "rgba(124,92,252,.6)";
@@ -510,7 +520,6 @@ function drawOverlay(hands) {
         ctx.strokeRect(bb[0] - pad, bb[1] - pad, bb[2] - bb[0] + pad*2, bb[3] - bb[1] + pad*2);
         ctx.setLineDash([]);
 
-        // Label pill
         if (hand.sign) {
             const lx = bb[0] - pad, ly = bb[1] - pad - 28;
             const txt = hand.sign;
@@ -524,73 +533,63 @@ function drawOverlay(hands) {
             ctx.fillText(txt, lx + 8, ly + 17);
         }
     }
+
+    // Update hold bar every render frame for smooth progress
+    if (lastLetter && holdStart && !letterAdded) {
+        const elapsed = Date.now() - holdStart;
+        const pct = Math.min(elapsed / HOLD_MS * 100, 100);
+        holdBar.style.width = pct + "%";
+        if (elapsed >= HOLD_MS) {
+            sentence += lastLetter;
+            sentenceEl.textContent = sentence;
+            letterAdded = true;
+            holdBar.style.width = "100%";
+        }
+    }
+
+    requestAnimationFrame(renderLoop);
 }
 
-// ── Main loop ────────────────────────────────────────────
+// ── Detection loop (network, decoupled) ──────────────────
 let busy = false;
 
-async function loop() {
-    // FPS counter
-    frameCount++;
-    const now = performance.now();
-    if (now - lastFpsTime >= 1000) {
-        fpsBadge.textContent = frameCount + " fps";
-        frameCount = 0;
-        lastFpsTime = now;
-    }
+async function detectLoop() {
+    if (busy) return;
+    busy = true;
+    try {
+        const b64 = captureFrame();
+        const res = await fetch("/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: b64 })
+        });
+        const data = await res.json();
 
-    if (!busy) {
-        busy = true;
-        try {
-            const b64 = captureFrame();
-            const res = await fetch("/process", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ image: b64 })
-            });
-            const data = await res.json();
+        latestHands = data.hands || [];
 
-            drawOverlay(data.hands || []);
+        const { letter, confidence } = data;
+        letterEl.textContent = letter || "—";
+        letterEl.classList.toggle("empty", !letter);
 
-            const { letter, confidence } = data;
-            letterEl.textContent = letter || "—";
-            letterEl.classList.toggle("empty", !letter);
+        const offset = CIRCUM - (confidence / 100) * CIRCUM;
+        confRing.style.strokeDashoffset = offset;
+        confValue.textContent = confidence + "%";
 
-            // Confidence ring
-            const offset = CIRCUM - (confidence / 100) * CIRCUM;
-            confRing.style.strokeDashoffset = offset;
-            confValue.textContent = confidence + "%";
+        if (letter && letter === lastLetter) {
+            // hold tracking continues in renderLoop
+        } else {
+            lastLetter  = letter;
+            holdStart   = letter ? Date.now() : null;
+            letterAdded = false;
+            holdBar.style.width = "0%";
+        }
+    } catch (e) { /* ignore transient errors */ }
+    busy = false;
+}
 
-            // Hold progress bar
-            if (letter && letter === lastLetter) {
-                if (!letterAdded && holdStart) {
-                    const elapsed = Date.now() - holdStart;
-                    const pct = Math.min(elapsed / HOLD_MS * 100, 100);
-                    holdBar.style.width = pct + "%";
-                    if (elapsed >= HOLD_MS) {
-                        sentence += letter;
-                        sentenceEl.textContent = sentence;
-                        letterAdded = true;
-                        holdBar.style.width = "100%";
-                    }
-                }
-            } else {
-                lastLetter  = letter;
-                holdStart   = letter ? Date.now() : null;
-                letterAdded = false;
-                holdBar.style.width = "0%";
-            }
-        } catch (e) { /* ignore transient errors */ }
-        busy = false;
-    } else {
-        // Draw raw video while waiting for server response
-        ctx.save();
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        ctx.restore();
-    }
-    requestAnimationFrame(loop);
+function loop() {
+    renderLoop();
+    setInterval(detectLoop, 100); // send ~10 requests/sec max
 }
 
 function addSpace()      { sentence += " "; sentenceEl.textContent = sentence; }
